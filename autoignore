@@ -1,0 +1,49 @@
+import net.runelite.api.*;
+import net.runelite.api.events.*;
+import net.runelite.client.eventbus.*;
+import java.util.*;
+
+public class SpamFilterPlugin extends Plugin
+{
+    private final Set<String> ignoredPlayers = new HashSet<>();
+    private final Map<String, Integer> messageCounts = new HashMap<>();
+    private final int MAX_MESSAGES_PER_MINUTE = 5;
+
+    @Subscribe
+    public void onChatMessage(ChatMessage event)
+    {
+        if (event.getType() != ChatMessageType.PUBLICCHAT)
+        {
+            return;
+        }
+        
+        if (!inGrandExchange(event.getTile()))
+        {
+            return;
+        }
+
+        String playerName = event.getName();
+        if (ignoredPlayers.contains(playerName))
+        {
+            return;
+        }
+
+        int messageCount = messageCounts.getOrDefault(playerName, 0) + 1;
+        messageCounts.put(playerName, messageCount);
+
+        if (messageCount > MAX_MESSAGES_PER_MINUTE)
+        {
+            ignoredPlayers.add(playerName);
+            messageCounts.remove(playerName);
+            Client.getInstance().addIgnore(playerName);
+        }
+    }
+
+    private boolean inGrandExchange(Tile tile)
+    {
+        // check if the player is inside the Grand Exchange by checking the tile coordinates
+        int x = tile.getX();
+        int y = tile.getY();
+        return x >= 3164 && x <= 3174 && y >= 3486 && y <= 3500;
+    }
+}
